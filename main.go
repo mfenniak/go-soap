@@ -184,17 +184,18 @@ func main() {
 
 	for _, xsd := range xsdMap {
 		for _, element := range xsd.Elements {
-			if element.ComplexType != nil {
-				w.WriteString("type ")
-				w.WriteString(element.Name)
-				w.WriteString(" struct {\n")
-				w.WriteString("\tXMLName xml.Name `xml:\"")
-				w.WriteString(xsd.TargetNamespace)
-				w.WriteString(" ")
-				w.WriteString(element.Name)
-				w.WriteString("\"`\n")
-				w.WriteString("}\n\n")
+			if element.ComplexType == nil {
+				continue
 			}
+			w.WriteString("type ")
+			w.WriteString(element.Name)
+			w.WriteString(" struct {\n")
+			w.WriteString("\tXMLName xml.Name `xml:\"")
+			w.WriteString(xsd.TargetNamespace)
+			w.WriteString(" ")
+			w.WriteString(element.Name)
+			w.WriteString("\"`\n")
+			w.WriteString("}\n\n")
 		}
 	}
 

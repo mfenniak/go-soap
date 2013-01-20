@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"encoding/xml"
-	"os"
+	"errors"
+	"flag"
+	"io"
+	"net/http"
 )
 
 type SoapEnvelope struct {
-	XMLName       xml.Name `xml:"http://schemas.xmlsoap.org/wsdl/soap/ Envelope"`
-	EncodingStyle string   `xml:"http://schemas.xmlsoap.org/wsdl/soap/ encodingStyle,attr"`
-	Body          SoapBody `xml:"http://schemas.xmlsoap.org/wsdl/soap/ Body"`
+	XMLName       xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Envelope"`
+	EncodingStyle string   `xml:"http://schemas.xmlsoap.org/soap/envelope/ encodingStyle,attr"`
+	Body          SoapBody `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"`
 }
 
 type SoapBody struct {
@@ -22,14 +26,78 @@ func CreateSoapEnvelope() *SoapEnvelope {
 }
 
 func main() {
-	env := CreateSoapEnvelope()
-	env.Body.Body = GetAllColumns{}
+	var username = flag.String("username", "", "HTTP basic auth username")
+	var password = flag.String("password", "", "HTTP basic auth password")
+	flag.Parse()
 
-	encoder := xml.NewEncoder(os.Stdout)
-	err := encoder.Encode(&env)
+	buffer := &bytes.Buffer{}
+	requestEnvelope := CreateSoapEnvelope()
+	requestEnvelope.Body.Body = GetAllColumns{}
+	encoder := xml.NewEncoder(buffer)
+	err := encoder.Encode(requestEnvelope)
 	if err != nil {
 		println("Error encoding document:", err.Error())
 		return
 	}
 
+	// FIXME: encoding
+	client := http.Client{}
+	req, err := http.NewRequest("POST", "http://na2.replicon.com/services/ProjectListService1.svc/soap", buffer)
+	if err != nil {
+		println("Error creating HTTP request:", err.Error())
+		return
+	}
+	if username != nil && password != nil && *username != "" && *password != "" {
+		req.SetBasicAuth(*username, *password)
+	}
+	req.Header.Add("SOAPAction", "\"http://replicon.com/IListService1/GetAllColumns\"")
+	req.Header.Add("Content-Type", "text/xml")
+	resp, err := client.Do(req)
+	if err != nil {
+		println("Error POSTing HTTP request:", err.Error())
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		println("Error:", resp.Status)
+	}
+	// FIXME: check Content-Type
+	// FIXME: encoding
+
+	// responseEnvelope := SoapEnvelope{}
+	bodyElement, err := DecodeResponseBody(resp.Body)
+	if err != nil {
+		println("Error decoding body:", err.Error())
+		return
+	}
+	println("Decoded body!", bodyElement.XMLName.Space, bodyElement.XMLName.Local)
+}
+
+func DecodeResponseBody(body io.Reader) (*GetAllColumnsResponse, error) {
+	decoder := xml.NewDecoder(body)
+	nextElementIsBody := false
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		switch startElement := token.(type) {
+		case xml.StartElement:
+			if nextElementIsBody {
+				responseBody := GetAllColumnsResponse{}
+				err = decoder.DecodeElement(&responseBody, &startElement)
+				if err != nil {
+					return nil, err
+				}
+				return &responseBody, nil
+			}
+			if startElement.Name.Space == "http://schemas.xmlsoap.org/soap/envelope/" && startElement.Name.Local == "Body" {
+				nextElementIsBody = true
+			}
+		}
+	}
+
+	return nil, errors.New("Did not find SOAP body element")
 }

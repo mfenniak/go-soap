@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+
+<!--
+Content-Type: text/xml
+SOAPAction: "http://replicon.com/IListService1/GetAllColumns"
+-->
+
+<soap:Envelope
+    xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <soap:Header>
+  </soap:Header>
+  <soap:Body>
+    <GetAllColumns  xmlns="http://replicon.com/" />
+  </soap:Body>
+</soap:Envelope>

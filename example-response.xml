@@ -1,0 +1,165 @@
+<?xml version="1.0"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+<s:Body>
+    <GetAllColumnsResponse xmlns="http://replicon.com/">
+    <GetAllColumnsResult xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+    <ListColumnGroup1>
+        <columns>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:string</dataType>
+                <displayText>Project Name</displayText>
+                <uri>urn:replicon:project-list-column:name</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:string</dataType>
+                <displayText>Code</displayText>
+                <uri>urn:replicon:project-list-column:code</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:object</dataType>
+                <displayText>Status</displayText>
+                <uri>urn:replicon:project-list-column:status</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:object</dataType>
+                <displayText>Client</displayText>
+                <uri>urn:replicon:project-list-column:client</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:object</dataType>
+                <displayText>Program</displayText>
+                <uri>urn:replicon:project-list-column:program</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:object</dataType>
+                <displayText>Billing Type</displayText>
+                <uri>urn:replicon:project-list-column:billing-type</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:object</dataType>
+                <displayText>Department</displayText>
+                <uri>urn:replicon:project-list-column:department</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:object</dataType>
+                <displayText>Project Leader</displayText>
+                <uri>urn:replicon:project-list-column:project-leader</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:date</dataType>
+                <displayText>Start Date</displayText>
+                <uri>urn:replicon:project-list-column:start-date</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:date</dataType>
+                <displayText>End Date</displayText>
+                <uri>urn:replicon:project-list-column:end-date</uri>
+            </ListColumn1>
+        </columns>
+        <displayText>Basic</displayText>
+        <uri>urn:replicon:project-list-column-group:basic</uri>
+    </ListColumnGroup1>
+    <ListColumnGroup1>
+        <columns>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:calendar-day-duration</dataType>
+                <displayText>Total Estimated</displayText>
+                <uri>urn:replicon:project-list-column:total-estimated-hours</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:number</dataType>
+                <displayText>FTE</displayText>
+                <uri>urn:replicon:project-list-column:hours-fte</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:calendar-day-duration</dataType>
+                <displayText>Total Actual</displayText>
+                <uri>urn:replicon:project-list-column:total-actual-hours</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:calendar-day-duration</dataType>
+                <displayText>Actual</displayText>
+                <uri>urn:replicon:project-list-column:actual-hours</uri>
+            </ListColumn1>
+        </columns>
+        <displayText>Hours</displayText>
+        <uri>urn:replicon:project-list-column-group:hours</uri>
+    </ListColumnGroup1>
+    <ListColumnGroup1>
+        <columns>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:money</dataType>
+                <displayText>Total Estimated</displayText>
+                <uri>urn:replicon:project-list-column:total-estimated-cost</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:money</dataType>
+                <displayText>Total Actual</displayText>
+                <uri>urn:replicon:project-list-column:total-actual-cost</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:money</dataType>
+                <displayText>Actual</displayText>
+                <uri>urn:replicon:project-list-column:actual-cost</uri>
+            </ListColumn1>
+        </columns>
+        <displayText>Cost</displayText>
+        <uri>urn:replicon:project-list-column-group:cost</uri>
+    </ListColumnGroup1>
+    <ListColumnGroup1>
+        <columns>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:money</dataType>
+                <displayText>Total Estimated</displayText>
+                <uri>urn:replicon:project-list-column:total-estimate-billing</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:money</dataType>
+                <displayText>Total Actual</displayText>
+                <uri>urn:replicon:project-list-column:total-actual-billing</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:money</dataType>
+                <displayText>Actual</displayText>
+                <uri>urn:replicon:project-list-column:actual-billing</uri>
+            </ListColumn1>
+        </columns>
+        <displayText>Billing</displayText>
+        <uri>urn:replicon:project-list-column-group:billing</uri>
+    </ListColumnGroup1>
+    <ListColumnGroup1>
+        <columns>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:money</dataType>
+                <displayText>Allocated</displayText>
+                <uri>urn:replicon:project-list-column:budget-allocated</uri>
+            </ListColumn1>
+        </columns>
+        <displayText>Budget</displayText>
+        <uri>urn:replicon:project-list-column-group:budget</uri>
+    </ListColumnGroup1>
+    <ListColumnGroup1>
+        <columns>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:number</dataType>
+                <displayText>Estimated</displayText>
+                <uri>urn:replicon:project-list-column:resources-estimated</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:number</dataType>
+                <displayText>Already Assigned</displayText>
+                <uri>urn:replicon:project-list-column:resources-already-assigned</uri>
+            </ListColumn1>
+            <ListColumn1>
+                <dataType>urn:replicon:list-type:number</dataType>
+                <displayText>Placeholder</displayText>
+                <uri>urn:replicon:project-list-column:resources-placeholders</uri>
+            </ListColumn1>
+        </columns>
+        <displayText>Resources</displayText>
+        <uri>urn:replicon:project-list-column-group:resources</uri>
+    </ListColumnGroup1>
+</GetAllColumnsResult>
+</GetAllColumnsResponse>
+</s:Body>
+</s:Envelope>

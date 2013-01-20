@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -161,25 +162,49 @@ func main() {
 	wsdlMap := make(map[string]*WsdlDefinitions)
 	xsdMap := make(map[string]*XsdSchema)
 
-	wsdl, err := LoadWsdl("http://na2.replicon.com/services/ProjectListService1.svc?wsdl", wsdlMap, xsdMap)
+	_, err := LoadWsdl("http://na2.replicon.com/services/ProjectListService1.svc?wsdl", wsdlMap, xsdMap)
 	if err != nil {
 		println("Error fetching WSDL:", err.Error())
 		return
 	}
 
-	// response, err := http.Get("http://na2.replicon.com/services/ProjectListService1.svc?wsdl")
-	// if err != nil {
-	// 	println("Error fetching URL:", err.Error())
-	// 	return
-	// }
+	w, err := os.OpenFile("test-client/ProjectListService1.go", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		println("Error opening OutTest.wsdl:", err.Error())
+		return
+	}
+	defer w.Close()
 
-	// wsdl, err := ParseWsdl(response.Body, "http://dws-na2-int.replicon.com/", "http://na2.replicon.com/services/")
-	// if err != nil {
-	// 	println("Error parsing WSDL:", err.Error())
-	// 	return
-	// }
+	// _, err = w.WriteString("package " + wsdl.Name)
+	_, err = w.WriteString("package main\n\n")
+	if err != nil {
+		println("Error writing header:", err.Error())
+		return
+	}
 
-	DebugPrintWsdl(wsdl)
+	for _, xsd := range xsdMap {
+		for _, element := range xsd.Elements {
+			if element.ComplexType != nil {
+				w.WriteString("type ")
+				w.WriteString(element.Name)
+				w.WriteString(" struct {\n")
+				w.WriteString("\tXMLName xml.Name `xml:\"")
+				w.WriteString(xsd.TargetNamespace)
+				w.WriteString(" ")
+				w.WriteString(element.Name)
+				w.WriteString("\"`\n")
+				w.WriteString("}\n\n")
+			}
+		}
+	}
+
+	// 		encoder := xml.NewEncoder(w)
+	// 		err = encoder.Encode(&obj)
+	// 		if err != nil {
+	// 			println("Error encoding document:", err.Error())
+	// 			return
+	// 		}
+
 }
 
 func LoadWsdl(url string, wsdlMap map[string]*WsdlDefinitions, xsdMap map[string]*XsdSchema) (retval *WsdlDefinitions, err error) {

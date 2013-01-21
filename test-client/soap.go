@@ -32,7 +32,7 @@ func main() {
 
 	buffer := &bytes.Buffer{}
 	requestEnvelope := CreateSoapEnvelope()
-	requestEnvelope.Body.Body = GetAllColumns{}
+	requestEnvelope.Body.Body = GetAllProjects{}
 	encoder := xml.NewEncoder(buffer)
 	err := encoder.Encode(requestEnvelope)
 	if err != nil {
@@ -42,15 +42,16 @@ func main() {
 
 	// FIXME: encoding
 	client := http.Client{}
-	req, err := http.NewRequest("POST", "http://na2.replicon.com/services/ProjectListService1.svc/soap", buffer)
+	req, err := http.NewRequest("POST", "http://na2.replicon.com/services/ProjectService1.svc/soap", buffer)
 	if err != nil {
 		println("Error creating HTTP request:", err.Error())
 		return
 	}
 	if username != nil && password != nil && *username != "" && *password != "" {
+		println("Autheticating")
 		req.SetBasicAuth(*username, *password)
 	}
-	req.Header.Add("SOAPAction", "\"http://replicon.com/IListService1/GetAllColumns\"")
+	req.Header.Add("SOAPAction", "\"http://replicon.com/IProjectService1/GetAllProjects\"")
 	req.Header.Add("Content-Type", "text/xml")
 	resp, err := client.Do(req)
 	if err != nil {
@@ -70,10 +71,19 @@ func main() {
 		println("Error decoding body:", err.Error())
 		return
 	}
-	println("Decoded body!", bodyElement.XMLName.Space, bodyElement.XMLName.Local)
+	println("Decoded body!")
+
+	if bodyElement.GetAllProjectsResult == nil {
+		println("GetAllProjectsResult is nil")
+		return
+	}
+
+	for _, project := range bodyElement.GetAllProjectsResult.ProjectReference1 {
+		println("Project:", *project.Slug, *project.Uri, *project.DisplayText)
+	}
 }
 
-func DecodeResponseBody(body io.Reader) (*GetAllColumnsResponse, error) {
+func DecodeResponseBody(body io.Reader) (*GetAllProjectsResponse, error) {
 	decoder := xml.NewDecoder(body)
 	nextElementIsBody := false
 	for {
@@ -86,7 +96,7 @@ func DecodeResponseBody(body io.Reader) (*GetAllColumnsResponse, error) {
 		switch startElement := token.(type) {
 		case xml.StartElement:
 			if nextElementIsBody {
-				responseBody := GetAllColumnsResponse{}
+				responseBody := GetAllProjectsResponse{}
 				err = decoder.DecodeElement(&responseBody, &startElement)
 				if err != nil {
 					return nil, err

@@ -163,13 +163,13 @@ func main() {
 	wsdlMap := make(map[string]*WsdlDefinitions)
 	xsdMap := make(map[string]*XsdSchema)
 
-	_, err := LoadWsdl("http://na2.replicon.com/services/ProjectListService1.svc?wsdl", wsdlMap, xsdMap)
+	_, err := LoadWsdl("http://na2.replicon.com/services/ProjectService1.svc?wsdl", wsdlMap, xsdMap)
 	if err != nil {
 		println("Error fetching WSDL:", err.Error())
 		return
 	}
 
-	w, err := os.OpenFile("test-client/ProjectListService1.go", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	w, err := os.OpenFile("test-client/ProjectService1.go", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		println("Error opening OutTest.wsdl:", err.Error())
 		return
@@ -182,37 +182,62 @@ func main() {
 		println("Error writing header:", err.Error())
 		return
 	}
+	_, err = w.WriteString("import \"encoding/xml\"\n\n")
 
 	for _, xsd := range xsdMap {
-		for _, complexType := range xsd.ComplexTypes {
-			w.WriteString("type ")
-			w.WriteString(complexType.Name)
-			w.WriteString(" struct {\n")
-			// w.WriteString("\tXMLName xml.Name `xml:\"")
-			// w.WriteString(xsd.TargetNamespace)
-			// w.WriteString(" ")
-			// w.WriteString(element.Name)
-			// w.WriteString("\"`\n")
-			for _, element := range complexType.Sequence.Elements {
-				w.WriteString("\t")
-				w.WriteString(element.Name)
-				w.WriteString(" ")
-				if element.MinOccurs == "0" {
-					w.WriteString("*")
-				}
-				if element.MaxOccurs == "unbounded" {
-					w.WriteString("[]")
-				}
-				w.WriteString("string")
-				w.WriteString(" `xml:\"")
-				w.WriteString(xsd.TargetNamespace)
-				w.WriteString(" ")
-				w.WriteString(element.Name)
-				w.WriteString("\"`\n")
+		for _, element := range xsd.Elements {
+			if element.ComplexType == nil {
+				continue
 			}
-			w.WriteString("}\n\n")
+			WriteComplexType(w, element.Name, element.ComplexType, xsd)
+		}
+		for _, complexType := range xsd.ComplexTypes {
+			WriteComplexType(w, complexType.Name, complexType, xsd)
 		}
 	}
+}
+
+func WriteComplexType(w io.Writer, elementName string, complexType *XsdComplexType, xsd *XsdSchema) {
+	io.WriteString(w, "type ")
+	io.WriteString(w, elementName)
+	io.WriteString(w, " struct {\n")
+
+	if complexType.Name == "" {
+		io.WriteString(w, "\tXMLName xml.Name `xml:\"")
+		io.WriteString(w, xsd.TargetNamespace)
+		io.WriteString(w, " ")
+		io.WriteString(w, elementName)
+		io.WriteString(w, "\"`\n")
+	}
+
+	for _, element := range complexType.Sequence.Elements {
+		io.WriteString(w, "\t")
+		io.WriteString(w, strings.Title(element.Name))
+		io.WriteString(w, " ")
+		if element.MaxOccurs == "unbounded" {
+			io.WriteString(w, "[]")
+		}
+		if element.MinOccurs == "0" {
+			io.WriteString(w, "*")
+		}
+		io.WriteString(w, FindType(element.Type))
+		io.WriteString(w, " `xml:\"")
+		io.WriteString(w, xsd.TargetNamespace)
+		io.WriteString(w, " ")
+		io.WriteString(w, element.Name)
+		io.WriteString(w, "\"`\n")
+	}
+	io.WriteString(w, "}\n\n")
+}
+
+func FindType(elementType string) string {
+	if strings.HasPrefix(elementType, "tns:") {
+		return elementType[4:]
+	} else if elementType == "xs:int" {
+		return "int32"
+	}
+	return "string"
+
 }
 
 func LoadWsdl(url string, wsdlMap map[string]*WsdlDefinitions, xsdMap map[string]*XsdSchema) (retval *WsdlDefinitions, err error) {

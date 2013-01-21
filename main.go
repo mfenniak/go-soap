@@ -103,10 +103,11 @@ type SoapBody struct {
 }
 
 type XsdSchema struct {
-	TargetNamespace    string        `xml:"http://www.w3.org/2001/XMLSchema targetNamespace,attr"`
-	ElementFormDefault string        `xml:"http://www.w3.org/2001/XMLSchema elementFormDefault,attr"`
-	Imports            []*XsdImport  `xml:"http://www.w3.org/2001/XMLSchema import"`
-	Elements           []*XsdElement `xml:"http://www.w3.org/2001/XMLSchema element"`
+	TargetNamespace    string            `xml:"http://www.w3.org/2001/XMLSchema targetNamespace,attr"`
+	ElementFormDefault string            `xml:"http://www.w3.org/2001/XMLSchema elementFormDefault,attr"`
+	Imports            []*XsdImport      `xml:"http://www.w3.org/2001/XMLSchema import"`
+	Elements           []*XsdElement     `xml:"http://www.w3.org/2001/XMLSchema element"`
+	ComplexTypes       []*XsdComplexType `xml:"http://www.w3.org/2001/XMLSchema complexType"`
 }
 
 type XsdImport struct {
@@ -183,29 +184,35 @@ func main() {
 	}
 
 	for _, xsd := range xsdMap {
-		for _, element := range xsd.Elements {
-			if element.ComplexType == nil {
-				continue
-			}
+		for _, complexType := range xsd.ComplexTypes {
 			w.WriteString("type ")
-			w.WriteString(element.Name)
+			w.WriteString(complexType.Name)
 			w.WriteString(" struct {\n")
-			w.WriteString("\tXMLName xml.Name `xml:\"")
-			w.WriteString(xsd.TargetNamespace)
-			w.WriteString(" ")
-			w.WriteString(element.Name)
-			w.WriteString("\"`\n")
+			// w.WriteString("\tXMLName xml.Name `xml:\"")
+			// w.WriteString(xsd.TargetNamespace)
+			// w.WriteString(" ")
+			// w.WriteString(element.Name)
+			// w.WriteString("\"`\n")
+			for _, element := range complexType.Sequence.Elements {
+				w.WriteString("\t")
+				w.WriteString(element.Name)
+				w.WriteString(" ")
+				if element.MinOccurs == "0" {
+					w.WriteString("*")
+				}
+				if element.MaxOccurs == "unbounded" {
+					w.WriteString("[]")
+				}
+				w.WriteString("string")
+				w.WriteString(" `xml:\"")
+				w.WriteString(xsd.TargetNamespace)
+				w.WriteString(" ")
+				w.WriteString(element.Name)
+				w.WriteString("\"`\n")
+			}
 			w.WriteString("}\n\n")
 		}
 	}
-
-	// 		encoder := xml.NewEncoder(w)
-	// 		err = encoder.Encode(&obj)
-	// 		if err != nil {
-	// 			println("Error encoding document:", err.Error())
-	// 			return
-	// 		}
-
 }
 
 func LoadWsdl(url string, wsdlMap map[string]*WsdlDefinitions, xsdMap map[string]*XsdSchema) (retval *WsdlDefinitions, err error) {

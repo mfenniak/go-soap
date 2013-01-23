@@ -2,8 +2,11 @@ package main
 
 import (
 	"encoding/xml"
+	"errors"
+	"flag"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -159,11 +162,14 @@ type XsdMaxInclusive struct {
 }
 
 func main() {
+	flag.Parse()
+	wsdlRoot := flag.Arg(0)
 
 	wsdlMap := make(map[string]*WsdlDefinitions)
 	xsdMap := make(map[string]*XsdSchema)
 
-	_, err := LoadWsdl("http://na2.replicon.com/services/ProjectService1.svc?wsdl", wsdlMap, xsdMap)
+	// "http://na2.replicon.com/services/ProjectService1.svc?wsdl"
+	_, err := LoadWsdl(wsdlRoot, nil, wsdlMap, xsdMap)
 	if err != nil {
 		println("Error fetching WSDL:", err.Error())
 		return
@@ -237,29 +243,59 @@ func FindType(elementType string) string {
 		return "int32"
 	}
 	return "string"
-
 }
 
-func LoadWsdl(url string, wsdlMap map[string]*WsdlDefinitions, xsdMap map[string]*XsdSchema) (retval *WsdlDefinitions, err error) {
+func LoadUrl(rawUrl string, relativeRawUrl *string) (io.Reader, error) {
+	targetUrl, err := url.Parse(rawUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	if relativeRawUrl != nil {
+		relativeUrl, err := url.Parse(*relativeRawUrl)
+		if err != nil {
+			return nil, err
+		}
+		targetUrl = targetUrl.ResolveReference(relativeUrl)
+	}
+
+	if targetUrl.Scheme == "http" || targetUrl.Scheme == "https" {
+		response, err := http.Get(targetUrl.String())
+		if err != nil {
+			return nil, err
+		}
+		return response.Body, nil
+	} else if targetUrl.Scheme == "file" {
+		if targetUrl.Host != "" && targetUrl.Host != "localhost" {
+			return nil, errors.New("file:// URL has unknown host " + targetUrl.Host)
+		}
+		path := targetUrl.String()[5:]
+		return os.Open(path)
+	}
+
+	return nil, errors.New("unable to understand url scheme:" + targetUrl.Scheme)
+}
+
+func LoadWsdl(url string, relativeUrl *string, wsdlMap map[string]*WsdlDefinitions, xsdMap map[string]*XsdSchema) (retval *WsdlDefinitions, err error) {
 	existing := wsdlMap[url]
 	if existing != nil {
 		return existing, nil
 	}
 
 	println("Loading WSDL:", url)
-	response, err := http.Get(url)
+	response, err := LoadUrl(url, relativeUrl)
 	if err != nil {
 		return nil, err
 	}
 
-	retval, err = ParseWsdl(response.Body, "http://dws-na2-int.replicon.com/", "http://na2.replicon.com/services/")
+	retval, err = ParseWsdl(response, "http://dws-na2-int.replicon.com/", "http://na2.replicon.com/services/")
 	if err != nil {
 		return nil, err
 	}
 	wsdlMap[url] = retval
 
 	for _, imp := range retval.Imports {
-		wsdlMap[imp.Location], err = LoadWsdl(imp.Location, wsdlMap, xsdMap)
+		wsdlMap[imp.Location], err = LoadWsdl(imp.Location, &url, wsdlMap, xsdMap)
 		if err != nil {
 			return nil, err
 		}
@@ -268,7 +304,7 @@ func LoadWsdl(url string, wsdlMap map[string]*WsdlDefinitions, xsdMap map[string
 	for _, types := range retval.Types {
 		for _, schema := range types.XsdSchema {
 			for _, imp := range schema.Imports {
-				_, err = LoadXsd(imp.SchemaLocation, xsdMap)
+				_, err = LoadXsd(imp.SchemaLocation, &url, xsdMap)
 			}
 		}
 	}
@@ -276,26 +312,26 @@ func LoadWsdl(url string, wsdlMap map[string]*WsdlDefinitions, xsdMap map[string
 	return retval, nil
 }
 
-func LoadXsd(url string, xsdMap map[string]*XsdSchema) (retval *XsdSchema, err error) {
+func LoadXsd(url string, relativeUrl *string, xsdMap map[string]*XsdSchema) (retval *XsdSchema, err error) {
 	existing := xsdMap[url]
 	if existing != nil {
 		return existing, nil
 	}
 
 	println("Loading XSD:", url)
-	response, err := http.Get(url)
+	response, err := LoadUrl(url, relativeUrl)
 	if err != nil {
 		return nil, err
 	}
 
-	retval, err = ParseXsd(response.Body, "http://dws-na2-int.replicon.com/", "http://na2.replicon.com/services/")
+	retval, err = ParseXsd(response, "http://dws-na2-int.replicon.com/", "http://na2.replicon.com/services/")
 	if err != nil {
 		return nil, err
 	}
 	xsdMap[url] = retval
 
 	for _, imp := range retval.Imports {
-		_, err = LoadXsd(imp.SchemaLocation, xsdMap)
+		_, err = LoadXsd(imp.SchemaLocation, &url, xsdMap)
 	}
 
 	return retval, nil

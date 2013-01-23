@@ -245,45 +245,44 @@ func FindType(elementType string) string {
 	return "string"
 }
 
-func LoadUrl(rawUrl string, relativeRawUrl *string) (io.Reader, error) {
+func CalculateAbsoluteUrl(rawUrl string, referenceBaseUrl *url.URL) (*url.URL, error) {
 	targetUrl, err := url.Parse(rawUrl)
 	if err != nil {
 		return nil, err
 	}
+	targetUrl = referenceBaseUrl.ResolveReference(targetUrl)
+	return targetUrl, nil
+}
 
-	if relativeRawUrl != nil {
-		relativeUrl, err := url.Parse(*relativeRawUrl)
-		if err != nil {
-			return nil, err
-		}
-		targetUrl = targetUrl.ResolveReference(relativeUrl)
-	}
-
+func LoadUrl(targetUrl *url.URL) (io.Reader, error) {
 	if targetUrl.Scheme == "http" || targetUrl.Scheme == "https" {
 		response, err := http.Get(targetUrl.String())
 		if err != nil {
 			return nil, err
 		}
 		return response.Body, nil
-	} else if targetUrl.Scheme == "file" {
-		if targetUrl.Host != "" && targetUrl.Host != "localhost" {
-			return nil, errors.New("file:// URL has unknown host " + targetUrl.Host)
-		}
-		path := targetUrl.String()[5:]
-		return os.Open(path)
 	}
-
 	return nil, errors.New("unable to understand url scheme:" + targetUrl.Scheme)
 }
 
-func LoadWsdl(url string, relativeUrl *string, wsdlMap map[string]*WsdlDefinitions, xsdMap map[string]*XsdSchema) (retval *WsdlDefinitions, err error) {
-	existing := wsdlMap[url]
+func LoadWsdl(rawUrl string, referenceBaseUrl *url.URL, wsdlMap map[string]*WsdlDefinitions, xsdMap map[string]*XsdSchema) (retval *WsdlDefinitions, err error) {
+	var targetUrl *url.URL
+	if referenceBaseUrl != nil {
+		targetUrl, err = CalculateAbsoluteUrl(rawUrl, referenceBaseUrl)
+	} else {
+		targetUrl, err = url.Parse(rawUrl)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	existing := wsdlMap[targetUrl.String()]
 	if existing != nil {
 		return existing, nil
 	}
 
-	println("Loading WSDL:", url)
-	response, err := LoadUrl(url, relativeUrl)
+	println("Loading WSDL:", targetUrl.String())
+	response, err := LoadUrl(targetUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -292,10 +291,10 @@ func LoadWsdl(url string, relativeUrl *string, wsdlMap map[string]*WsdlDefinitio
 	if err != nil {
 		return nil, err
 	}
-	wsdlMap[url] = retval
+	wsdlMap[targetUrl.String()] = retval
 
 	for _, imp := range retval.Imports {
-		wsdlMap[imp.Location], err = LoadWsdl(imp.Location, &url, wsdlMap, xsdMap)
+		wsdlMap[imp.Location], err = LoadWsdl(imp.Location, targetUrl, wsdlMap, xsdMap)
 		if err != nil {
 			return nil, err
 		}
@@ -304,7 +303,7 @@ func LoadWsdl(url string, relativeUrl *string, wsdlMap map[string]*WsdlDefinitio
 	for _, types := range retval.Types {
 		for _, schema := range types.XsdSchema {
 			for _, imp := range schema.Imports {
-				_, err = LoadXsd(imp.SchemaLocation, &url, xsdMap)
+				_, err = LoadXsd(imp.SchemaLocation, targetUrl, xsdMap)
 			}
 		}
 	}
@@ -312,14 +311,24 @@ func LoadWsdl(url string, relativeUrl *string, wsdlMap map[string]*WsdlDefinitio
 	return retval, nil
 }
 
-func LoadXsd(url string, relativeUrl *string, xsdMap map[string]*XsdSchema) (retval *XsdSchema, err error) {
-	existing := xsdMap[url]
+func LoadXsd(rawUrl string, referenceBaseUrl *url.URL, xsdMap map[string]*XsdSchema) (retval *XsdSchema, err error) {
+	var targetUrl *url.URL
+	if referenceBaseUrl != nil {
+		targetUrl, err = CalculateAbsoluteUrl(rawUrl, referenceBaseUrl)
+	} else {
+		targetUrl, err = url.Parse(rawUrl)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	existing := xsdMap[targetUrl.String()]
 	if existing != nil {
 		return existing, nil
 	}
 
-	println("Loading XSD:", url)
-	response, err := LoadUrl(url, relativeUrl)
+	println("Loading XSD:", targetUrl.String())
+	response, err := LoadUrl(targetUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -328,10 +337,10 @@ func LoadXsd(url string, relativeUrl *string, xsdMap map[string]*XsdSchema) (ret
 	if err != nil {
 		return nil, err
 	}
-	xsdMap[url] = retval
+	xsdMap[targetUrl.String()] = retval
 
 	for _, imp := range retval.Imports {
-		_, err = LoadXsd(imp.SchemaLocation, &url, xsdMap)
+		_, err = LoadXsd(imp.SchemaLocation, targetUrl, xsdMap)
 	}
 
 	return retval, nil

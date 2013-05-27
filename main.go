@@ -180,7 +180,7 @@ func main() {
 	w := &bytes.Buffer{}
 
 	//_, err = w.WriteString("package " + wsdl.Name)
-	//_, err = w.WriteString("package main\n\n")
+	_, err = w.WriteString("package main\n\n")
 	if err != nil {
 		println("Error writing header:", err.Error())
 		return

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/xml"
 	"errors"
 	"flag"
+	"go/format"
 	"io"
 	"net/http"
 	"net/url"
@@ -175,15 +177,10 @@ func main() {
 		return
 	}
 
-	w, err := os.OpenFile("test-client/ProjectService1.go", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		println("Error opening OutTest.wsdl:", err.Error())
-		return
-	}
-	defer w.Close()
+	w := &bytes.Buffer{}
 
-	// _, err = w.WriteString("package " + wsdl.Name)
-	_, err = w.WriteString("package main\n\n")
+	//_, err = w.WriteString("package " + wsdl.Name)
+	//_, err = w.WriteString("package main\n\n")
 	if err != nil {
 		println("Error writing header:", err.Error())
 		return
@@ -201,6 +198,20 @@ func main() {
 			WriteComplexType(w, complexType.Name, complexType, xsd)
 		}
 	}
+
+	formattedOutput, err := format.Source(w.Bytes())
+	if err != nil {
+		println("Error while goformat'ing code:", err.Error())
+		return
+	}
+
+	file, err := os.OpenFile("test-client/ProjectService1.go", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		println("Error opening OutTest.wsdl:", err.Error())
+		return
+	}
+	file.Write(formattedOutput)
+	file.Close()
 }
 
 func WriteComplexType(w io.Writer, elementName string, complexType *XsdComplexType, xsd *XsdSchema) {

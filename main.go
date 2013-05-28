@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -185,18 +186,29 @@ func main() {
 		println("Error writing header:", err.Error())
 		return
 	}
-	_, err = w.WriteString("import \"encoding/xml\"\n\n")
+	_, err = w.WriteString("import (\n")
+	_, err = w.WriteString("\"encoding/xml\"\n")
+	_, err = w.WriteString("\"math/big\"\n")
+	_, err = w.WriteString(")\n")
+	_, err = w.WriteString("var _ = big.MaxBase // Avoid potential unused-import error\n\n")
+
+	complexTypes := make(NamedComplexTypeSlice, 0)
 
 	for _, xsd := range xsdMap {
 		for _, element := range xsd.Elements {
 			if element.ComplexType == nil {
 				continue
 			}
-			WriteComplexType(w, element.Name, element.ComplexType, xsd)
+			complexTypes = append(complexTypes, NamedComplexType{element.Name, element.ComplexType, xsd})
 		}
 		for _, complexType := range xsd.ComplexTypes {
-			WriteComplexType(w, complexType.Name, complexType, xsd)
+			complexTypes = append(complexTypes, NamedComplexType{complexType.Name, complexType, xsd})
 		}
+	}
+
+	sort.Sort(&complexTypes)
+	for _, complexType := range complexTypes {
+		WriteComplexType(w, complexType.Name, complexType.ComplexType, complexType.Xsd)
 	}
 
 	formattedOutput, err := format.Source(w.Bytes())
@@ -212,6 +224,26 @@ func main() {
 	}
 	file.Write(formattedOutput)
 	file.Close()
+}
+
+type NamedComplexType struct {
+	Name        string
+	ComplexType *XsdComplexType
+	Xsd         *XsdSchema
+}
+
+type NamedComplexTypeSlice []NamedComplexType
+
+func (s *NamedComplexTypeSlice) Len() int {
+	return len(*s)
+}
+
+func (s *NamedComplexTypeSlice) Less(i, j int) bool {
+	return strings.ToLower((*s)[i].Name) < strings.ToLower((*s)[j].Name)
+}
+
+func (s *NamedComplexTypeSlice) Swap(i, j int) {
+	(*s)[i], (*s)[j] = (*s)[j], (*s)[i]
 }
 
 func WriteComplexType(w io.Writer, elementName string, complexType *XsdComplexType, xsd *XsdSchema) {
@@ -250,9 +282,71 @@ func WriteComplexType(w io.Writer, elementName string, complexType *XsdComplexTy
 func FindType(elementType string) string {
 	if strings.HasPrefix(elementType, "tns:") {
 		return elementType[4:]
+	} else if elementType == "xs:boolean" {
+		return "bool"
+	} else if elementType == "xs:string" {
+		return "string"
+	} else if elementType == "xs:byte" {
+		return "int8"
+	} else if elementType == "xs:short" {
+		return "int16"
 	} else if elementType == "xs:int" {
 		return "int32"
+	} else if elementType == "xs:long" {
+		return "int64"
+	} else if elementType == "xs:unsignedByte" {
+		return "uint8"
+	} else if elementType == "xs:unsignedShort" {
+		return "uint16"
+	} else if elementType == "xs:unsignedInt" {
+		return "uint32"
+	} else if elementType == "xs:unsignedLong" {
+		return "uint64"
+	} else if elementType == "xs:integer" {
+		return "big.Int"
+	} else if elementType == "xs:nonPositiveInteger" {
+		return "big.Int"
+	} else if elementType == "xs:negativeInteger" {
+		return "big.Int"
+	} else if elementType == "xs:nonNegativeInteger" {
+		return "big.Int"
+	} else if elementType == "xs:positiveInteger" {
+		return "big.Int"
+	} else if elementType == "xs:decimal" {
+		return "big.Rat"
+	} else if elementType == "xs:float" {
+		return "float32"
+	} else if elementType == "xs:double" {
+		return "float64"
 	}
+	/*
+		xs:hexBinary
+		xs:base64Binary
+		xs:duration
+		xs:dateTime
+		xs:time
+		xs:date
+		xs:gYearMonth
+		xs:gYear
+		xs:gMonthDay
+		xs:gDay
+		xs:gMonth
+		xs:anyURI
+		xs:QName
+		xs:NOTATION
+		xs:normalizedString
+		xs:token
+		xs:language
+		xs:ID
+		xs:IDREF
+		xs:IDREFS
+		xs:ENTITY
+		xs:ENTITIES
+		xs:NMTOKEN
+		xs:NMTOKENS
+		xs:Name
+		xs:NCName
+	*/
 	return "string"
 }
 
